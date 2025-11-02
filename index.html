@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WordPress Plugin Security Audit Viewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 15px;
+        }
+
+        .prompt-section {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .prompt-section h2 {
+            color: #856404;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .prompt-section code {
+            background: #f8f9fa;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+        }
+
+        .input-section {
+            margin: 30px 0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        textarea {
+            width: 100%;
+            min-height: 200px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        button, .file-input-wrapper {
+            padding: 10px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        button:hover, .file-input-wrapper:hover {
+            background: #2980b9;
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+
+        .summary-section {
+            margin: 30px 0;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .summary-section h2 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .piracy-score {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+        }
+
+        .piracy-score.high {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        .piracy-score.medium {
+            background: #fff3cd;
+            color: #856404;
+            border: 2px solid #ffeaa7;
+        }
+
+        .piracy-score.low {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            table-layout: fixed;
+        }
+
+        th {
+            background: #34495e;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            position: sticky;
+            top: 0;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.2s;
+        }
+
+        th:hover {
+            background: #2c3e50;
+        }
+
+        th.sortable::after {
+            content: ' ⇅';
+            opacity: 0.5;
+            font-size: 12px;
+        }
+
+        th.sort-asc::after {
+            content: ' ▲';
+            opacity: 1;
+        }
+
+        th.sort-desc::after {
+            content: ' ▼';
+            opacity: 1;
+        }
+
+        th:nth-child(1) { width: 8%; }  /* Severity */
+        th:nth-child(2) { width: 12%; } /* Type */
+        th:nth-child(3) { width: 15%; } /* Title */
+        th:nth-child(4) { width: 12%; } /* File */
+        th:nth-child(5) { width: 8%; }  /* Lines */
+        th:nth-child(6) { width: 22%; } /* Explanation */
+        th:nth-child(7) { width: 23%; } /* Recommended Fix */
+
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #ddd;
+            vertical-align: top;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+        
+        td:nth-child(1) {
+            white-space: nowrap;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .severity {
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            display: inline-block;
+            text-transform: uppercase;
+        }
+
+        .severity.critical {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .severity.high {
+            background: #f5c6cb;
+            color: #721c24;
+        }
+
+        .severity.medium {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .severity.low {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .type-badge {
+            padding: 3px 8px;
+            background: #e9ecef;
+            color: #495057;
+            border-radius: 3px;
+            font-size: 11px;
+            font-family: monospace;
+            display: inline-block;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            max-width: 100%;
+            line-height: 1.3;
+        }
+
+        .file-path {
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 12px;
+            color: #6c757d;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            white-space: normal;
+        }
+
+        .explanation, .recommended-fix {
+            line-height: 1.5;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .urgent-actions {
+            background: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+
+        .urgent-actions h3 {
+            color: #721c24;
+            margin-bottom: 10px;
+        }
+
+        .urgent-actions ul {
+            margin-left: 20px;
+        }
+
+        .urgent-actions li {
+            margin: 8px 0;
+            color: #721c24;
+        }
+
+        .verification-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e7f3ff;
+            border-left: 4px solid #0066cc;
+            border-radius: 4px;
+        }
+
+        .verification-section h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+        }
+
+        .verification-item {
+            margin: 15px 0;
+            padding: 10px;
+            background: white;
+            border-radius: 4px;
+            border: 1px solid #b3d9ff;
+        }
+
+        .verification-item strong {
+            color: #0066cc;
+        }
+
+        .indicators-list {
+            list-style: none;
+            padding-left: 0;
+        }
+
+        .indicators-list li {
+            padding: 8px;
+            margin: 5px 0;
+            background: #fff3cd;
+            border-left: 3px solid #ffc107;
+            border-radius: 3px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #6c757d;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 15px 0;
+            border-left: 4px solid #dc3545;
+        }
+
+        .export-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #e8f5e9;
+            border: 1px solid #4caf50;
+            border-radius: 6px;
+        }
+
+        .export-section h3 {
+            color: #2e7d32;
+            margin-bottom: 10px;
+        }
+
+        .export-btn {
+            padding: 10px 20px;
+            background: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+
+        .export-btn:hover {
+            background: #45a049;
+        }
+
+        .filter-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .filter-section h3 {
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .filter-inputs {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .filter-input-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .filter-input-group label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        .filter-input-group input,
+        .filter-input-group select {
+            padding: 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .filter-input-group input:focus,
+        .filter-input-group select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .clear-filters-btn {
+            margin-top: 10px;
+            padding: 8px 16px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+
+        .clear-filters-btn:hover {
+            background: #5a6268;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            table {
+                font-size: 11px;
+                display: block;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+            
+            th:nth-child(1) { width: 70px; min-width: 70px; }
+            th:nth-child(2) { width: 80px; min-width: 80px; }
+            th:nth-child(3) { width: 150px; min-width: 150px; }
+            th:nth-child(4) { width: 120px; min-width: 120px; }
+            th:nth-child(5) { width: 60px; min-width: 60px; }
+            th:nth-child(6) { width: 250px; min-width: 250px; }
+            th:nth-child(7) { width: 280px; min-width: 280px; }
+
+            th, td {
+                padding: 8px 6px;
+            }
+            
+            td {
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+            
+            .file-path {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔒 WordPress Plugin Security Audit Viewer</h1>
+
+        <div class="prompt-section">
+            <h2>📋 Instructions for Cursor AI & ChatGPT</h2>
+            <p><strong>You are a security auditor for WordPress plugins.</strong> I have provided a plugin codebase. Your job is to find security vulnerabilities, insecure coding patterns, backdoors, signs the plugin has been nulled/pirated, and any suspicious/obfuscated code that may hide malicious functionality.</p>
+            
+            <h3 style="margin-top: 15px; color: #856404;">Goals:</h3>
+            <ol style="margin-left: 20px; margin-top: 10px;">
+                <li>Identify security vulnerabilities (XSS, SQLi, CSRF, RCE, file inclusion, insecure deserialization, privilege escalation, insecure use of WP APIs, hardcoded secrets).</li>
+                <li>Identify backdoors or persistence mechanisms (hidden admin creation, eval/base64/gzinflate chains, remote update or command endpoints, scheduled tasks that call remote URLs).</li>
+                <li>Detect signs that the plugin is nulled/pirated (removed license checks, replaced update URLs, modified plugin headers, presence of "crack" comments, replaced licensing files).</li>
+                <li>Provide clear remediation steps and code fixes, and mark files that need urgent removal/cleanup.</li>
+            </ol>
+
+            <h3 style="margin-top: 15px; color: #856404;">Instructions:</h3>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>Scan all PHP, JS, and assets. Focus on patterns: <code>eval()</code>, <code>create_function()</code>, <code>base64_decode()</code>, <code>gzinflate()</code>, <code>preg_replace("/.*/e")</code>, <code>system/exec/passthru/shell_exec</code>, <code>curl/wp_remote_post</code> to suspicious domains, <code>file_put_contents</code> to theme/plugin directories, and dynamic includes.</li>
+                <li>Check for missing capability/nonce checks on actions (AJAX endpoints, admin_post, REST API endpoints), and note where <code>current_user_can</code>, <code>check_admin_referer</code>, <code>wp_verify_nonce</code>, or <code>$wpdb->prepare</code> are missing or misused.</li>
+                <li>For each finding, return JSON array <code>findings[]</code> where each finding includes: <code>title</code>, <code>severity</code> (critical/high/medium/low), <code>type</code>, <code>file_path</code>, <code>line_numbers</code>, <code>explanation</code>, and <code>recommended_fix</code>.</li>
+                <li>Also return a short <code>nulled/piracy_score</code> (0–100) with a short rationale and list of matching indicators.</li>
+                <li>If you are unsure of a runtime behavior, mark as "requires dynamic verification" and give a short dynamic test to run.</li>
+                <li><strong>Output only valid JSON. No other prose.</strong></li>
+            </ul>
+        </div>
+
+        <div class="input-section">
+            <h2>📤 Load Security Audit JSON</h2>
+            <div class="input-group">
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".json" />
+                    Browse JSON File
+                </div>
+                <button onclick="clearData()">Clear</button>
+            </div>
+            <textarea id="jsonInput" placeholder="Paste your security audit JSON here or browse for a file..."></textarea>
+            <button onclick="processJSON()" style="width: 100%; margin-top: 10px;">Process & Display Results</button>
+        </div>
+
+        <div id="errorMessage" class="error" style="display: none;"></div>
+        
+        <div id="exportSection" class="export-section" style="display: none;">
+            <h3>📥 Export Report</h3>
+            <button class="export-btn" onclick="exportHTML()">💾 Save as HTML</button>
+        </div>
+
+        <div id="filterSection" class="filter-section" style="display: none;">
+            <h3>🔍 Filter Results</h3>
+            <div class="filter-inputs">
+                <div class="filter-input-group">
+                    <label>Severity</label>
+                    <select id="filterSeverity" onchange="applyFilters()">
+                        <option value="">All</option>
+                        <option value="critical">Critical</option>
+                        <option value="high">High</option>
+                        <option value="medium">Medium</option>
+                        <option value="low">Low</option>
+                    </select>
+                </div>
+                <div class="filter-input-group">
+                    <label>Type</label>
+                    <input type="text" id="filterType" placeholder="e.g., XSS, SQLi..." oninput="applyFilters()">
+                </div>
+                <div class="filter-input-group">
+                    <label>Title</label>
+                    <input type="text" id="filterTitle" placeholder="Search title..." oninput="applyFilters()">
+                </div>
+                <div class="filter-input-group">
+                    <label>File Path</label>
+                    <input type="text" id="filterFile" placeholder="Search file path..." oninput="applyFilters()">
+                </div>
+            </div>
+            <button class="clear-filters-btn" onclick="clearFilters()">Clear All Filters</button>
+        </div>
+        
+        <div id="results" style="display: none;"></div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const jsonInput = document.getElementById('jsonInput');
+        const resultsDiv = document.getElementById('results');
+        const errorDiv = document.getElementById('errorMessage');
+        const exportSection = document.getElementById('exportSection');
+        const filterSection = document.getElementById('filterSection');
+        
+        let currentSortColumn = null;
+        let currentSortDirection = 'asc';
+        let findingsData = [];
+
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    jsonInput.value = e.target.result;
+                    processJSON();
+                };
+                reader.onerror = function() {
+                    showError('Error reading file. Please try again.');
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        function clearData() {
+            jsonInput.value = '';
+            resultsDiv.innerHTML = '';
+            resultsDiv.style.display = 'none';
+            errorDiv.style.display = 'none';
+            exportSection.style.display = 'none';
+            filterSection.style.display = 'none';
+            fileInput.value = '';
+            findingsData = [];
+            clearFilters();
+        }
+
+        function showError(message) {
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            resultsDiv.style.display = 'none';
+            exportSection.style.display = 'none';
+            filterSection.style.display = 'none';
+        }
+
+        function processJSON() {
+            const jsonText = jsonInput.value.trim();
+            if (!jsonText) {
+                showError('Please paste JSON data or browse for a file.');
+                return;
+            }
+
+            try {
+                const data = JSON.parse(jsonText);
+                errorDiv.style.display = 'none';
+                findingsData = data.findings || [];
+                renderResults(data);
+                exportSection.style.display = 'block';
+                if (findingsData.length > 0) {
+                    filterSection.style.display = 'block';
+                }
+            } catch (e) {
+                showError('Invalid JSON format: ' + e.message);
+            }
+        }
+
+        function renderResults(data) {
+            let html = '';
+
+            // Summary Section
+            if (data.nulled_piracy_score !== undefined) {
+                html += '<div class="summary-section">';
+                html += '<h2>📊 Security Audit Summary</h2>';
+                
+                const score = data.nulled_piracy_score;
+                const scoreClass = score >= 70 ? 'high' : score >= 40 ? 'medium' : 'low';
+                html += `<div class="piracy-score ${scoreClass}">Piracy/Nulled Score: ${score}/100</div>`;
+                
+                if (data.piracy_rationale) {
+                    html += `<p style="margin-top: 15px;"><strong>Rationale:</strong> ${escapeHtml(data.piracy_rationale)}</p>`;
+                }
+
+                if (data.piracy_indicators && data.piracy_indicators.length > 0) {
+                    html += '<h3 style="margin-top: 20px;">Piracy Indicators:</h3>';
+                    html += '<ul class="indicators-list">';
+                    data.piracy_indicators.forEach(indicator => {
+                        html += `<li>${escapeHtml(indicator)}</li>`;
+                    });
+                    html += '</ul>';
+                }
+                html += '</div>';
+            }
+
+            // Urgent Actions
+            if (data.urgent_actions && data.urgent_actions.length > 0) {
+                html += '<div class="urgent-actions">';
+                html += '<h3>🚨 URGENT ACTIONS REQUIRED</h3>';
+                html += '<ul>';
+                data.urgent_actions.forEach(action => {
+                    html += `<li>${escapeHtml(action)}</li>`;
+                });
+                html += '</ul>';
+                html += '</div>';
+            }
+
+            // Findings Table
+            if (data.findings && data.findings.length > 0) {
+                html += '<h2 style="margin-top: 30px;">🔍 Security Findings</h2>';
+                html += '<table id="findingsTable">';
+                html += '<thead>';
+                html += '<tr>';
+                html += '<th class="sortable" data-column="severity" onclick="sortTable(\'severity\')">Severity</th>';
+                html += '<th class="sortable" data-column="type" onclick="sortTable(\'type\')">Type</th>';
+                html += '<th class="sortable" data-column="title" onclick="sortTable(\'title\')">Title</th>';
+                html += '<th class="sortable" data-column="file_path" onclick="sortTable(\'file_path\')">File</th>';
+                html += '<th class="sortable" data-column="line_numbers" onclick="sortTable(\'line_numbers\')">Lines</th>';
+                html += '<th class="sortable" data-column="explanation" onclick="sortTable(\'explanation\')">Explanation</th>';
+                html += '<th class="sortable" data-column="recommended_fix" onclick="sortTable(\'recommended_fix\')">Recommended Fix</th>';
+                html += '</tr>';
+                html += '</thead>';
+                html += '<tbody id="findingsTableBody">';
+                html += '</tbody>';
+                html += '</table>';
+            }
+
+            // Dynamic Verification
+            if (data.requires_dynamic_verification && data.requires_dynamic_verification.length > 0) {
+                html += '<div class="verification-section">';
+                html += '<h3>🔬 Requires Dynamic Verification</h3>';
+                data.requires_dynamic_verification.forEach(item => {
+                    html += '<div class="verification-item">';
+                    html += `<p><strong>${escapeHtml(item.test)}</strong></p>`;
+                    html += `<p><strong>Method:</strong> ${escapeHtml(item.method || 'N/A')}</p>`;
+                    if (item.endpoint) {
+                        html += `<p><strong>Endpoint:</strong> <code>${escapeHtml(item.endpoint)}</code></p>`;
+                    }
+                    if (item.files) {
+                        html += `<p><strong>Files:</strong> ${escapeHtml(item.files)}</p>`;
+                    }
+                    html += '</div>';
+                });
+                html += '</div>';
+            }
+
+            resultsDiv.innerHTML = html;
+            resultsDiv.style.display = 'block';
+            
+            // Render findings table
+            if (data.findings && data.findings.length > 0) {
+                renderFindingsTable();
+            }
+        }
+
+        function renderFindingsTable() {
+            const tbody = document.getElementById('findingsTableBody');
+            if (!tbody) return;
+
+            // Apply filters
+            let filteredData = [...findingsData];
+            
+            const severityFilter = document.getElementById('filterSeverity')?.value.toLowerCase();
+            const typeFilter = document.getElementById('filterType')?.value.toLowerCase();
+            const titleFilter = document.getElementById('filterTitle')?.value.toLowerCase();
+            const fileFilter = document.getElementById('filterFile')?.value.toLowerCase();
+
+            if (severityFilter) {
+                filteredData = filteredData.filter(f => f.severity.toLowerCase() === severityFilter);
+            }
+            if (typeFilter) {
+                filteredData = filteredData.filter(f => (f.type || '').toLowerCase().includes(typeFilter));
+            }
+            if (titleFilter) {
+                filteredData = filteredData.filter(f => (f.title || '').toLowerCase().includes(titleFilter));
+            }
+            if (fileFilter) {
+                filteredData = filteredData.filter(f => (f.file_path || '').toLowerCase().includes(fileFilter));
+            }
+
+            // Build table rows
+            let html = '';
+            filteredData.forEach(finding => {
+                html += '<tr>';
+                html += `<td><span class="severity ${finding.severity}">${finding.severity}</span></td>`;
+                html += `<td><span class="type-badge">${escapeHtml(finding.type || 'N/A')}</span></td>`;
+                html += `<td><strong>${escapeHtml(finding.title)}</strong></td>`;
+                html += `<td class="file-path">${escapeHtml(finding.file_path || 'N/A')}</td>`;
+                html += `<td>${escapeHtml(finding.line_numbers || 'N/A')}</td>`;
+                html += `<td class="explanation">${escapeHtml(finding.explanation || '')}</td>`;
+                html += `<td class="recommended-fix">${escapeHtml(finding.recommended_fix || '')}</td>`;
+                html += '</tr>';
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function sortTable(column) {
+            // Toggle sort direction
+            if (currentSortColumn === column) {
+                currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                currentSortColumn = column;
+                currentSortDirection = 'asc';
+            }
+
+            // Remove sort classes from all headers
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            // Add sort class to current header
+            const currentHeader = document.querySelector(`th[data-column="${column}"]`);
+            if (currentHeader) {
+                currentHeader.classList.add(currentSortDirection === 'asc' ? 'sort-asc' : 'sort-desc');
+            }
+
+            // Sort the data
+            const severityOrder = { 'critical': 0, 'high': 1, 'medium': 2, 'low': 3 };
+            
+            findingsData.sort((a, b) => {
+                let aVal = a[column] || '';
+                let bVal = b[column] || '';
+
+                // Special sorting for severity
+                if (column === 'severity') {
+                    aVal = severityOrder[aVal.toLowerCase()] ?? 999;
+                    bVal = severityOrder[bVal.toLowerCase()] ?? 999;
+                } else {
+                    aVal = String(aVal).toLowerCase();
+                    bVal = String(bVal).toLowerCase();
+                }
+
+                if (aVal < bVal) return currentSortDirection === 'asc' ? -1 : 1;
+                if (aVal > bVal) return currentSortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+
+            renderFindingsTable();
+        }
+
+        function applyFilters() {
+            renderFindingsTable();
+        }
+
+        function clearFilters() {
+            const filterSeverity = document.getElementById('filterSeverity');
+            const filterType = document.getElementById('filterType');
+            const filterTitle = document.getElementById('filterTitle');
+            const filterFile = document.getElementById('filterFile');
+
+            if (filterSeverity) filterSeverity.value = '';
+            if (filterType) filterType.value = '';
+            if (filterTitle) filterTitle.value = '';
+            if (filterFile) filterFile.value = '';
+
+            renderFindingsTable();
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function exportHTML() {
+            // Get only the style element, not script content
+            const styleElement = document.querySelector('style');
+            const styleContent = styleElement ? styleElement.textContent : '';
+            const reportContent = resultsDiv.innerHTML;
+            const dateTimeStr = new Date().toLocaleString();
+            const dateStr = new Date().toLocaleDateString();
+            const isoDate = new Date().toISOString().split('T')[0];
+            
+            // Build HTML with proper escaping
+            const htmlParts = [
+                '<!DOCTYPE html>',
+                '<html lang="en">',
+                '<head>',
+                '    <meta charset="UTF-8">',
+                '    <meta name="viewport" content="width=device-width, initial-scale=1.0">',
+                '    <title>WordPress Plugin Security Audit Report - ' + dateStr + '</title>',
+                '    <style>',
+                styleContent,
+                '    </style>',
+                '</head>',
+                '<body>',
+                '    <div class="container">',
+                '        <h1>🔒 WordPress Plugin Security Audit Report</h1>',
+                '        <p style="color: #6c757d; margin-bottom: 20px;">Generated on: ' + dateTimeStr + '</p>',
+                reportContent,
+                '    </div>',
+                '</body>',
+                '</html>'
+            ];
+            
+            const htmlContent = htmlParts.join('\n');
+
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'security-audit-report-' + isoDate + '.html';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Auto-process if there's initial data
+        window.addEventListener('DOMContentLoaded', function() {
+            const initialData = jsonInput.value.trim();
+            if (initialData) {
+                processJSON();
+            }
+        });
+    </script>
+</body>
+</html>
+
