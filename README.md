@@ -35,8 +35,25 @@ By Weng Fei Fung (Weng). A lightweight, browser-based tool for visualizing secur
 
 ### Performing a Security Audit
 
-1. Provide your WordPress plugin codebase to Cursor AI or ChatGPT
-2. Use the audit instructions displayed in the yellow prompt section
+**Step 1: Copy and use this prompt for ChatGPT or Cursor AI:**
+
+> **You are a security auditor for WordPress plugins.** I have provided a plugin codebase. Your job is to find security vulnerabilities, insecure coding patterns, backdoors, signs the plugin has been nulled/pirated, and any suspicious/obfuscated code that may hide malicious functionality.
+> 
+> **Goals:**
+> 1. Identify security vulnerabilities (XSS, SQLi, CSRF, RCE, file inclusion, insecure deserialization, privilege escalation, insecure use of WP APIs, hardcoded secrets).
+> 2. Identify backdoors or persistence mechanisms (hidden admin creation, eval/base64/gzinflate chains, remote update or command endpoints, scheduled tasks that call remote URLs).
+> 3. Detect signs that the plugin is nulled/pirated (removed license checks, replaced update URLs, modified plugin headers, presence of "crack" comments, replaced licensing files).
+> 4. Provide clear remediation steps and code fixes, and mark files that need urgent removal/cleanup.
+> 
+> **Instructions:**
+> - Scan all PHP, JS, and assets. Focus on patterns: `eval()`, `create_function()`, `base64_decode()`, `gzinflate()`, `preg_replace("/.*/e")`, `system/exec/passthru/shell_exec`, `curl/wp_remote_post` to suspicious domains, `file_put_contents` to theme/plugin directories, and dynamic includes.
+> - Check for missing capability/nonce checks on actions (AJAX endpoints, admin_post, REST API endpoints), and note where `current_user_can`, `check_admin_referer`, `wp_verify_nonce`, or `$wpdb->prepare` are missing or misused.
+> - For each finding, return JSON array `findings[]` where each finding includes: `title`, `severity` (critical/high/medium/low), `type`, `file_path`, `line_numbers`, `explanation`, and `recommended_fix`.
+> - Also return a short `nulled/piracy_score` (0–100) with a short rationale and list of matching indicators.
+> - If you are unsure of a runtime behavior, mark as "requires dynamic verification" and give a short dynamic test to run.
+> - **Output only valid JSON. No other prose.**
+
+2. Provide your WordPress plugin codebase to Cursor AI or ChatGPT
 3. The AI will analyze the code and return JSON with findings
 4. Load the JSON into this viewer to visualize results
 
