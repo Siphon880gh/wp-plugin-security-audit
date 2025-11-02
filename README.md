@@ -22,17 +22,6 @@ By Weng Fei Fung (Weng). A lightweight, browser-based tool for visualizing secur
 1. Open `index.html` in any modern web browser
 2. No build process or server required - it's a standalone HTML file
 
-### Loading Audit Data
-
-**Option 1: Browse for JSON file**
-- Click "Browse JSON File" button
-- Select your audit JSON file
-
-**Option 2: Paste JSON directly**
-- Copy your audit JSON
-- Paste into the textarea
-- Click "Process & Display Results"
-
 ### Performing a Security Audit
 
 **Step 1: Copy and use this prompt for ChatGPT or Cursor AI:**
@@ -56,6 +45,18 @@ By Weng Fei Fung (Weng). A lightweight, browser-based tool for visualizing secur
 2. Provide your WordPress plugin codebase to Cursor AI or ChatGPT
 3. The AI will analyze the code and return JSON with findings
 4. Load the JSON into this viewer to visualize results
+
+### Loading Audit Data
+
+**Option 1: Browse for JSON file**
+- Click "Browse JSON File" button
+- Select your audit JSON file
+
+**Option 2: Paste JSON directly**
+- Copy your audit JSON
+- Paste into the textarea
+- Click "Process & Display Results"
+
 
 ## Audit JSON Format
 
